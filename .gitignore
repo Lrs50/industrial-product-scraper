@@ -1,0 +1,15 @@
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment folders
+.venv/
+
+# output folder
+output/
+
+# logs
+
+*.log
