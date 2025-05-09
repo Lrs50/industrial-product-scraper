@@ -75,12 +75,20 @@ class Crawler(object):
     collecting the URLs of individual product pages.
     """
     
-    def __init__(self):
+    def __init__(self, log_to_console: bool = True, log_to_file: bool = False):
         """
-        Initializes the Crawler instance
+        Initializes the Crawler instance.
+
+        Sets up the logger for the crawler and prepares internal state.
+        The crawler is responsible for navigating the Baldor online catalog,
+        extracting category links using Playwright, and collecting product
+        page URLs via their paginated public API.
+
+        Args:
+            log_to_console (bool): Whether to enable console logging output.
+            log_to_file (bool): Whether to enable file-based logging output.
         """
-        
-        self.logger = get_logger("Crawler", to_console=True, to_file=False)
+        self.logger = get_logger("Crawler", to_console=log_to_console, to_file=log_to_file)
         
     def setup_browser(self) -> None:
         """
