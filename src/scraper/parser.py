@@ -23,6 +23,9 @@ DEFAULT_HEADERS = {
     "Connection": "keep-alive",
 }
 
+def normalize_spaces(text: str) -> str:
+    return ' '.join(text.split())
+
 class Parser(object):
     
     def __init__(self, url: str,log_to_console: bool = True, log_to_file: bool = False):
@@ -170,7 +173,27 @@ class Parser(object):
     
     def parse_parts(self,soup):
         
-        parts = {}
+        parts = []
+        
+        parts_div = soup.find("div", class_="pane", attrs={"data-tab": "parts"})
+        
+        rows = parts_div.find("tbody").find_all("tr")
+        
+        for row in rows:
+            cols  = row.find_all("td")
+            if len(cols)!=3:
+                self.logger.warning("Malformed row in parse_parts")
+                continue
+            
+            part = normalize_spaces(cols[0].get_text(strip=True))
+            desc = normalize_spaces(cols[1].get_text(strip=True))
+            qty  = normalize_spaces(cols[2].get_text(strip=True))
+        
+            parts.append({
+            "part_number": part,
+            "description": desc,
+            "quantity": qty,
+            })
         
         return parts
     
@@ -184,9 +207,9 @@ def main():
     
     links = [
         #"https://www.baldor.com/catalog/027603",
-        #"https://www.baldor.com/catalog/1021W",
-        #"https://www.baldor.com/catalog/CD1803R",
-        "https://www.baldor.com/catalog/BSM100C-1150AA"
+        "https://www.baldor.com/catalog/1021W",
+        "https://www.baldor.com/catalog/CD1803R",
+        #"https://www.baldor.com/catalog/BSM100C-1150AA"
     ]
     
     for url in links[:]:
