@@ -104,6 +104,8 @@ class Parser(object):
         
         self.data["product_id"] = title
         self.data["description"] = description
+        
+        self.logger.info("Sucessfully retrieved catalog info") 
     
     def parse_specs(self,soup):
         """Extracts key-value specs from the 'Specs' tab."""
@@ -162,13 +164,14 @@ class Parser(object):
         if extras:
             nameplate["EXTRAS"] = extras
             
-        
+        self.logger.info("Sucessfully retrieved nameplate info") 
         return nameplate
     
     def parse_performance(self,soup):
         
         performance = {}
         
+        self.logger.info("Sucessfully retrieved performance info")
         return performance
     
     def parse_parts(self,soup):
@@ -195,12 +198,35 @@ class Parser(object):
             "quantity": qty,
             })
         
+        self.logger.info("Sucessfully retrieved parts info") 
         return parts
     
     def parse_accessories(self,soup):
         
-        accessories = {}
+        accessories = []
         
+        accessories_div = soup.find("div", class_="pane", attrs={"data-tab": "accessories"})
+        
+        rows = accessories_div.find("tbody").find_all("tr")
+        
+        for row in rows:
+            cols  = row.find_all("td")
+            if len(cols)!=3:
+                self.logger.warning("Malformed row in parse_accessories")
+                continue
+            
+            part = normalize_spaces(cols[0].get_text(strip=True))
+            desc = normalize_spaces(cols[1].get_text(strip=True))
+            qty  = normalize_spaces(cols[2].get_text(strip=True))
+        
+            accessories.append({
+            "part_number": part,
+            "description": desc,
+            "list price": qty,
+            })
+        
+        
+        self.logger.info("Sucessfully retrieved accessories info")
         return accessories
 
 def main():
@@ -208,7 +234,7 @@ def main():
     links = [
         #"https://www.baldor.com/catalog/027603",
         "https://www.baldor.com/catalog/1021W",
-        "https://www.baldor.com/catalog/CD1803R",
+        #"https://www.baldor.com/catalog/CD1803R",
         #"https://www.baldor.com/catalog/BSM100C-1150AA"
     ]
     
