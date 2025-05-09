@@ -32,7 +32,11 @@ class Parser(object):
         self.data = {}
         
         self.parsers = {
-            "specs": self.parse_specs
+            "specs": self.parse_specs,
+            "nameplate": self.parse_nameplate,
+            "performance": self.parse_performance,
+            "parts": self.parse_parts,
+            "accessories": self.parse_accessories,
         }
         
     def find_sessions(self,soup: Any) -> List[str]:
@@ -123,14 +127,66 @@ class Parser(object):
         self.logger.info("Sucessfully retrieved Specs info")    
         return specs   
     
+    def parse_nameplate(self,soup):
+        
+        nameplate = {}
+        extras = []
+        
+        nameplate_div = soup.find("div", class_="pane", attrs={"data-tab": "nameplate"})
+        
+        rows = nameplate_div.find_all("tr")
+        
+        for row in rows:
+            cells = row.find_all(["th", "td"])
+            key = None
+            
+            if len(cells) ==1:
+                cell_text = cells[0].get_text(strip=True)
+                extras.append(cell_text)
+                continue
+                
+            for cell in cells:
+                text = cell.get_text(strip=True)
+                if cell.name == "th":
+                    key=text
+                elif cell.name =="td":
+                    if key:
+                        value = text
+                        nameplate[key] = value
+                        key=None
+                    elif text:
+                        extras.append(text)
+        if extras:
+            nameplate["EXTRAS"] = extras
+            
+        
+        return nameplate
+    
+    def parse_performance(self,soup):
+        
+        performance = {}
+        
+        return performance
+    
+    def parse_parts(self,soup):
+        
+        parts = {}
+        
+        return parts
+    
+    def parse_accessories(self,soup):
+        
+        accessories = {}
+        
+        return accessories
 
 def main():
     
     links = [
         #"https://www.baldor.com/catalog/027603",
-        "https://www.baldor.com/catalog/1021W",
+        #"https://www.baldor.com/catalog/1021W",
         #"https://www.baldor.com/catalog/CD1803R",
-        #"https://www.baldor.com/catalog/BSM100C-1150AA"
+        "https://www.baldor.com/catalog/BSM100C-1150AA"
     ]
     
     for url in links[:]:
