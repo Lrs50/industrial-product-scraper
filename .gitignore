@@ -13,3 +13,5 @@ output/
 # logs
 
 *.log
+
+*.html
