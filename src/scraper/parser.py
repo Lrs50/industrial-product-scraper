@@ -2,6 +2,8 @@ from pydantic import BaseModel, Field
 from typing import List, Dict, Any
 import requests
 from bs4 import BeautifulSoup
+import re
+import json
 
 import sys
 import os
@@ -40,6 +42,7 @@ class Parser(object):
             "performance": self.parse_performance,
             "parts": self.parse_parts,
             "accessories": self.parse_accessories,
+            "drawings": self.parse_drawings
         }
         
     def find_sessions(self,soup: Any) -> List[str]:
@@ -100,12 +103,12 @@ class Parser(object):
             if key_cell and value_cell:
                 key = key_cell.get_text(strip=True)
                 value = value_cell.get_text(separator=" ", strip=True)
-                self.data["info"][key] = value
+                self.data["info"][key.lower()] = value
         
         self.data["product_id"] = title
         self.data["description"] = description
         
-        self.logger.info("Sucessfully retrieved catalog info") 
+        self.logger.info("Successfully retrieved catalog info") 
     
     def parse_specs(self,soup):
         """Extracts key-value specs from the 'Specs' tab."""
@@ -119,7 +122,7 @@ class Parser(object):
         
         specs = self.parse_label_value_grid(specs_div)
         
-        self.logger.info("Sucessfully retrieved Specs info")    
+        self.logger.info("Successfully retrieved Specs info")    
         
         return specs   
     
@@ -148,18 +151,17 @@ class Parser(object):
                 elif cell.name =="td":
                     if key:
                         value = text
-                        nameplate[key] = value
+                        nameplate[key.lower()] = value
                         key=None
                     elif text:
                         extras.append(text)
         if extras:
             nameplate["EXTRAS"] = extras
             
-        self.logger.info("Sucessfully retrieved nameplate info") 
+        self.logger.info("Successfully retrieved nameplate info") 
         
         return nameplate
-     
-    
+      
     def parse_label_value_grid(self,table):
         data = {}
         columns = table.find_all("div", class_="col")
@@ -172,7 +174,7 @@ class Parser(object):
                 if label and value:
                     key = label.get_text(strip=True)
                     val = value.get_text(separator=", ",strip=True)
-                    data[key] = val
+                    data[key.lower()] = val
     
         return data
         
@@ -243,7 +245,7 @@ class Parser(object):
             
             performance["associated_urls"] = links
             
-        self.logger.info("Sucessfully retrieved performance info")
+        self.logger.info("Successfully retrieved performance info")
         
         return performance
     
@@ -271,7 +273,7 @@ class Parser(object):
             "quantity": qty,
             })
         
-        self.logger.info("Sucessfully retrieved parts info") 
+        self.logger.info("Successfully retrieved parts info") 
         return parts
     
     def parse_accessories(self,soup):
@@ -299,17 +301,90 @@ class Parser(object):
             })
         
         
-        self.logger.info("Sucessfully retrieved accessories info")
+        self.logger.info("Successfully retrieved accessories info")
         return accessories
+
+    def parse_drawings(self,soup):
+        
+        drawings = []
+        
+        drawings_div  = soup.find("div", class_="pane", attrs={"data-tab": "drawings"})
+        
+        if not drawings_div:
+            self.logger.warning("Drawings div not found")
+            return drawings
+        
+        cad_div = drawings_div.find("div", class_="cadfiles")
+        
+        if cad_div is None:
+            self.logger.warning("Could not find Cad Div in Drawings")
+            return drawings
+        
+        ng_init = cad_div.get("ng-init", "")
+        matches = re.findall(r"\[\s*{.*?}\s*\]", ng_init, flags=re.DOTALL)
+        
+        if not matches:
+            self.logger.warning("Could not find Matches in Drawings")
+            return drawings
+
+        for i,match in enumerate(matches):
+            matches[i] = match.replace("\n", "").replace("\r", "")
+            try:
+                matches[i] = json.loads(matches[i])
+            except json.JSONDecodeError as e:
+                self.logger.error("Error parsing JSON in Drawings:", e)
+                return []
+        
+        
+        cad_json = matches[0]
+        
+        cad_data = [
+            {
+                "name": item.get("name",None),
+                "filetype": item.get("filetype",None),
+                "value": item.get("value",None),
+                "url": item.get("url",None),
+                "cad":item.get("cad",None),
+                "version":item.get("version",None),
+            }
+            for item in cad_json
+            if item.get("url",None)
+        ]
+
+        img_json = matches[1]
+        img_data = [
+            {
+                "description":item.get("description",None),
+                "kind":item.get("kind",None),
+                "material":item.get("material",None),
+                "number":item.get("number",None),
+                "revision":item.get("revision",None),
+                "revisionLetter":item.get("revisionLetter",None),
+                "type":item.get("type",None),
+                "url":item.get("url",None),
+            }
+            for item in img_json
+            if item.get("number",None)
+        ]
+        
+        
+        self.logger.info("Successfully retrieved drawings info") 
+        
+        """
+        both img and cad info are gonna be usefull for the downloader in the future
+        their info is needed for future api calls
+        """
+        return {"imgs":img_data,"cads":cad_data}
 
 def main():
     
     links = [
         #"https://www.baldor.com/catalog/027603",
-        #"https://www.baldor.com/catalog/1021W",
-        "https://www.baldor.com/catalog/CD1803R",
+        "https://www.baldor.com/catalog/1021W",
+        #"https://www.baldor.com/catalog/CD1803R",
         #"https://www.baldor.com/catalog/BSM100C-1150AA",
-        #"https://www.baldor.com/catalog/CD3433"
+        #"https://www.baldor.com/catalog/CD3433",
+        #"https://www.baldor.com/catalog/024018"
         
     ]
     
