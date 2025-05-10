@@ -1,5 +1,6 @@
 import logging 
 import os
+import logging
 
 def get_logger(
     name: str,
@@ -8,7 +9,19 @@ def get_logger(
     level: int = logging.INFO
     ) -> logging.Logger:
     
-    """Returns a logger with a specific name, avoiding duplicate handlers."""
+    """
+    Creates and returns a named logger with optional console and file output.
+
+    Args:
+        name (str): The name of the logger instance.
+        to_console (bool): Whether to output logs to the console.
+        to_file (bool): Whether to output logs to a file (./logs/project.log).
+        level (int): Logging level (e.g., logging.INFO, logging.DEBUG).
+
+    Returns:
+        logging.Logger: Configured logger with specified handlers and format.
+    """
+    
     log_file = "project.log"
     log_dir = "logs"
     
@@ -41,3 +54,22 @@ def get_logger(
         logger.propagate = False
         
     return logger 
+
+def attach_urllib3_to_logger(base_logger: logging.Logger, level: int = logging.INFO) -> None:
+    """
+    Routes urllib3 logs through the given logger's handlers and sets the log level.
+
+    Args:
+        base_logger (logging.Logger): Your configured logger.
+        level (int): Logging level for urllib3 (e.g., logging.DEBUG).
+    """
+    urllib3_logger = logging.getLogger("urllib3")
+
+    # Set level explicitly, or it defaults to WARNING (which hides INFO logs)
+    urllib3_logger.setLevel(level)
+
+    for handler in base_logger.handlers:
+        if handler not in urllib3_logger.handlers:
+            urllib3_logger.addHandler(handler)
+
+    urllib3_logger.propagate = False

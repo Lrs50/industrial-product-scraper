@@ -109,6 +109,7 @@ dependencies = [
     { name = "pydantic" },
     { name = "requests" },
     { name = "tqdm" },
+    { name = "urllib3" },
 ]
 
 [package.metadata]
@@ -119,6 +120,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.11.4" },
     { name = "requests", specifier = ">=2.32.3" },
     { name = "tqdm", specifier = ">=4.67.1" },
+    { name = "urllib3", specifier = ">=1.26.20" },
 ]
 
 [[package]]

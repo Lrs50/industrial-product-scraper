@@ -66,6 +66,14 @@ Alternative Pages:
 from playwright.sync_api import sync_playwright
 import requests
 from typing import List, Tuple,Dict, Any,Optional
+
+# import sys
+# import os
+# from pathlib import Path
+# from pprint import pprint
+
+# sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from utils import get_logger
 
 class Crawler(object):
