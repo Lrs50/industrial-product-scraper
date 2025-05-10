@@ -349,37 +349,40 @@ class Parser(object):
                 self.logger.error("Error parsing JSON in Drawings:", e)
                 return []
         
-        
-        cad_json = matches[0]
-        
-        cad_data = [
-            {
-                "name": item.get("name",None),
-                "filetype": item.get("filetype",None),
-                "value": item.get("value",None),
-                "url": item.get("url",None),
-                "cad":item.get("cad",None),
-                "version":item.get("version",None),
-            }
-            for item in cad_json
-            if item.get("url",None)
-        ]
-
-        img_json = matches[1]
-        img_data = [
-            {
-                "description":item.get("description",None),
-                "kind":item.get("kind",None),
-                "material":item.get("material",None),
-                "number":item.get("number",None),
-                "revision":item.get("revision",None),
-                "revisionLetter":item.get("revisionLetter",None),
-                "type":item.get("type",None),
-                "url":item.get("url",None),
-            }
-            for item in img_json
-            if item.get("number",None)
-        ]
+        cad_data = []
+        img_data = []
+        for match in matches:
+            data1 = [
+                {
+                    "name": item.get("name",None),
+                    "filetype": item.get("filetype",None),
+                    "value": item.get("value",None),
+                    "url": item.get("url",None),
+                    "cad":item.get("cad",None),
+                    "version":item.get("version",None),
+                }
+                for item in match
+                if item.get("url",None)
+            ]
+            if data1:
+                cad_data.extend(data1)
+            data2 = [
+                {
+                    "description":item.get("description",None),
+                    "kind":item.get("kind",None),
+                    "material":item.get("material",None),
+                    "number":item.get("number",None),
+                    "revision":item.get("revision",None),
+                    "revisionLetter":item.get("revisionLetter",None),
+                    "type":item.get("type",None),
+                    "url":item.get("url",None),
+                }
+                for item in match
+                if item.get("number",None)
+            ]
+            if data2:
+                img_data.extend(data2)
+            
         
         
         self.logger.info("Successfully retrieved drawings info") 
@@ -393,13 +396,13 @@ class Parser(object):
 def main():
     
     links = [
-        #"https://www.baldor.com/catalog/027603",
-        #"https://www.baldor.com/catalog/1021W",
+        "https://www.baldor.com/catalog/027603",
+        "https://www.baldor.com/catalog/1021W",
         "https://www.baldor.com/catalog/CD1803R",
-        #"https://www.baldor.com/catalog/BSM100C-1150AA",
-        #"https://www.baldor.com/catalog/CD3433",
-        #"https://www.baldor.com/catalog/024018",
-        #"https://www.baldor.com/catalog/027550"
+        "https://www.baldor.com/catalog/BSM100C-1150AA",
+        "https://www.baldor.com/catalog/CD3433",
+        "https://www.baldor.com/catalog/024018",
+        "https://www.baldor.com/catalog/027550"
         
     ]
     
