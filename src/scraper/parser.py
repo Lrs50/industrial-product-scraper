@@ -108,6 +108,20 @@ class Parser(object):
         self.data["product_id"] = title
         self.data["description"] = description
         
+        # id 451 means no picture
+        img_tag = catalog_div.find("img", class_="product-image")
+        img_src = img_tag.get("data-src")
+        
+        self.data["img_src"] = img_src
+        
+        pdf_tag = catalog_div.find("a", id="infoPacket")
+        
+        if pdf_tag is None:
+            self.logger.warning("No Product Information Packet Found")
+        else:
+            pdf_src = pdf_tag.get("href")
+            self.data["pdf_src"] = pdf_src
+            
         self.logger.info("Successfully retrieved catalog info") 
     
     def parse_specs(self,soup):
@@ -380,18 +394,19 @@ def main():
     
     links = [
         #"https://www.baldor.com/catalog/027603",
-        "https://www.baldor.com/catalog/1021W",
-        #"https://www.baldor.com/catalog/CD1803R",
+        #"https://www.baldor.com/catalog/1021W",
+        "https://www.baldor.com/catalog/CD1803R",
         #"https://www.baldor.com/catalog/BSM100C-1150AA",
         #"https://www.baldor.com/catalog/CD3433",
-        #"https://www.baldor.com/catalog/024018"
+        #"https://www.baldor.com/catalog/024018",
+        #"https://www.baldor.com/catalog/027550"
         
     ]
     
     for url in links[:]:
         parser = Parser(url)
         data = parser.run()
-        pprint(data)
+        #pprint(data)
 
 if __name__ == "__main__":
     main()
