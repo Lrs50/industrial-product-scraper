@@ -74,7 +74,7 @@ from typing import List, Tuple,Dict, Any,Optional
 
 # sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from utils import get_logger
+from utils import *
 
 class Crawler(object):
     
@@ -119,14 +119,17 @@ class Crawler(object):
         self.playwright.stop()
         
     def run(self) -> List[str]:
-        
         """
-        Orchestrates the full scraping process:
-        - Starts the browser
-        - Finds product categories
-        - Scrapes all product URLs
-        - Closes the browser
-        Returns a list of product page URLs.
+        Executes the full crawling workflow and returns a list of product page URLs.
+
+        Steps:
+            - Initializes the browser session
+            - Extracts product category links
+            - Scrapes all product URLs across categories
+            - Cleans up browser resources
+
+        Returns:
+            List[str]: A list of collected product page URLs.
         """
         
         self.logger.info("Starting the Crawler...")
@@ -149,8 +152,13 @@ class Crawler(object):
     
     def scrape_products(self) -> None:
         """
-        Iterates over the scraped categories, extracts product codes via API,
-        and builds the corresponding product URLs.
+        Extracts and returns the cleaned names of all subcategories on the catalog page.
+
+        Navigates to the main catalog URL, waits for the subcategory elements to load,
+        and parses their text content into a clean list of names.
+
+        Returns:
+            List[str]: A list of cleaned subcategory names.
         """
         
         for name,url in self.categories:
@@ -167,10 +175,14 @@ class Crawler(object):
                 continue
             
     def extract_category_names(self) -> List[str]:
-        
         """
-        Navigates to the main catalog page and extracts the cleaned names of all subcategories.
-        Returns a list of subcategory names as strings.
+        Extracts and returns the cleaned names of all subcategories on the catalog page.
+
+        Navigates to the main catalog URL, waits for the subcategory elements to load,
+        and parses their text content into a clean list of names.
+
+        Returns:
+            List[str]: A list of cleaned subcategory names.
         """
         
         self.page.goto(self.url,timeout=30000, wait_until="domcontentloaded")
@@ -181,15 +193,33 @@ class Crawler(object):
     
     def clean_subcategory_name(self, element: Any) -> str:
         """
-        Cleans the inner text of a subcategory element by removing line breaks and extra spaces.
+        Cleans the text content of a subcategory HTML element.
+
+        Replaces line breaks with spaces and trims leading/trailing whitespace
+        to produce a standardized subcategory name.
+
+        Args:
+            element (Any): The Playwright element representing a subcategory.
+
+        Returns:
+            str: The cleaned subcategory name as a single-line string.
         """
         
         return " ".join(element.inner_text().split("\n")).strip()
     
     def resolve_category_url(self,name: str) -> Optional[Tuple[str,str]]:
         """
-        Finds the URL associated with a given category name by simulating a click on the category.
-        Returns a tuple (category name, category URL) or None if the category is not found.
+        Finds and returns the URL associated with a given category name.
+
+        Simulates a user click on the category element and captures the resulting
+        navigation URL. If the category is not found or the process fails,
+        logs the issue and returns None.
+
+        Args:
+            name (str): The cleaned name of the category to locate.
+
+        Returns:
+            Tuple[str, str]: A tuple (category name, category URL) if found, or None otherwise.
         """
         
         page = self.browser.new_page()
@@ -218,8 +248,16 @@ class Crawler(object):
     
     def find_categories(self) -> List[Tuple[str,str]]:
         """
-        Extracts all subcategory names and resolves their associated URLs.
-        Returns a list of tuples containing (category name, category URL).
+        Finds all product categories by extracting their names and resolving their URLs.
+
+        This method:
+            - Extracts subcategory names from the catalog page
+            - Resolves each name to its corresponding URL via simulated clicks
+            - Logs the progress and any errors encountered
+
+        Returns:
+            List[Tuple[str, str]]: A list of (category name, category URL) tuples.
+            Returns an empty list if extraction fails.
         """
         
         self.logger.info("Scraping the categories...")
@@ -243,8 +281,19 @@ class Crawler(object):
         
     def get_products(self,category_id: int, page_index: int = 0, page_size: int = 10) -> Dict[str,Any]:
         """
-        Performs a GET request to the Baldor API to retrieve product data for a given category.
-        Returns the full JSON response as a dictionary.
+        Fetches product data from the Baldor API for a given category and page.
+
+        Sends a GET request with specified parameters and headers. Handles transient
+        failures using a resilient session and logs any errors that occur.
+
+        Args:
+            category_id (int): The numeric ID of the product category to query.
+            page_index (int): The index of the results page to fetch (default is 0).
+            page_size (int): The number of products to fetch per page (default is 10).
+
+        Returns:
+            Dict[str, Any]: The JSON response from the API as a dictionary.
+            On failure, returns a fallback structure: {"results": {"matches": []}}.
         """
         
         url = "https://www.baldor.com/api/products"
@@ -263,20 +312,36 @@ class Crawler(object):
         }
 
         try:
-            response = requests.get(url, params=params, headers=headers,timeout=10)
+            attach_urllib3_to_logger(self.logger)
+            
+            session = create_resilient_session()
+            response = session.get(url, params=params, headers=headers,timeout=10)
             response.raise_for_status()  # will raise if status != 200
+            
             return response.json()
         
         except requests.RequestException as e:
             self.logger.error(f"[API ERROR] Category={category_id}, Page={page_index}: {e}")
             return {"results": {"matches": []}}
+        except Exception as e:
+            self.logger.error(f"[UNEXPECTED ERROR] during request: {e}")
+            return {"results": {"matches": []}}
 
     def collect_product_codes_for_category(self,category_id: int, page_size: int = 1000) -> List[str]:
         """
-        Collects all product codes from a category by iterating over the paginated API.
-        Returns a list of product codes as strings.
+        Collects all product codes for a given category by paginating through the Baldor API.
+
+        Sends repeated API requests until no more products are returned. Extracts the
+        "code" field from each product and accumulates the results.
+
+        Args:
+            category_id (int): The numeric ID of the category to fetch products from.
+            page_size (int): Number of products to request per page (default is 1000).
+
+        Returns:
+            List[str]: A list of product codes retrieved from the category.
         """
-        
+                
         all_codes = []
         page_index = 0
 
