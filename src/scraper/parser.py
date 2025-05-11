@@ -29,12 +29,11 @@ def normalize_spaces(text: str) -> str:
 
 class Parser(object):
     
-    def __init__(self, url: str,log_to_console: bool = True, log_to_file: bool = False):
+    def __init__(self,log_to_console: bool = True, log_to_file: bool = False):
         """
         Initializes the parser with the target URL and logging preferences.
 
         Args:
-            url (str): The URL of the product page to parse.
             log_to_console (bool): Whether to log to the console.
             log_to_file (bool): Whether to log to a file.
         """
@@ -42,7 +41,6 @@ class Parser(object):
         self.logger = get_logger("Parser", to_console=log_to_console, to_file=log_to_file)
         attach_urllib3_to_logger(self.logger)
         
-        self.url    = url
         self.data : dict = {}
         
         self.parsers = {
@@ -76,7 +74,7 @@ class Parser(object):
         
         return names
       
-    def run(self) -> Dict[str,Any]:
+    def run(self, url: str) -> Dict[str,Any]:
         """
         Executes the full parsing routine for the product page.
 
@@ -84,10 +82,14 @@ class Parser(object):
         and runs parsing functions for each supported section (e.g., specs, drawings, parts).
         The extracted data is collected and returned as a structured dictionary.
 
+        Args:
+            url (str): The URL of the product page to parse.
+
         Returns:
             Dict[str, Any]: Parsed data for each available section, keyed by session name.
         """
         
+        self.url    = url
         self.logger.info(f"{'_'*20} Started the Parser for item {self.url.split("/")[-1]} {'_'*20}")
         
         session = create_resilient_session()
