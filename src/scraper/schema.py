@@ -3,6 +3,8 @@ from collections import defaultdict
 from pydantic import BaseModel
 from pprint import pprint
 
+from utils import *
+
 class Product(BaseModel):
     product_id: str
     name: str = None
@@ -159,6 +161,8 @@ def standardize_product_json(raw_json: Dict[str,Any],metadata: Dict[str,Any]) ->
         Dict[str, Any]: Cleaned and standardized product dictionary, ready for export or storage.
     """
     
+    logger = get_logger("Schema Validator")
+    
     clean_json = {
         **extract_core_metadata(metadata),
         **raw_json
@@ -177,4 +181,10 @@ def standardize_product_json(raw_json: Dict[str,Any],metadata: Dict[str,Any]) ->
     if clean_json.get("parts"):
         clean_json["bom"] = deduplicate_bom(clean_json.pop("parts"))
     
-    return remove_empty_fields(Product(**clean_json).model_dump())
+    try:
+        return remove_empty_fields(Product(**clean_json).model_dump())
+    except Exception as e:
+        logger.error("Data did not pass Standard Schema validation")
+        logger.error(f"Validation details: {e}")
+        return remove_empty_fields(clean_json)
+    
