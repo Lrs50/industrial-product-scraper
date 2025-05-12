@@ -169,7 +169,7 @@ class Crawler(object):
 
                 product_urls = [f"https://www.baldor.com/catalog/{code}" for code in codes]                
                 self.products.extend(product_urls)
-                self.product_matches = product_matches
+                self.product_matches.extend(product_matches)
                         
             except Exception as e:
                 self.logger.exception(f"Failed to fetch products for category '{name}': {e}")
@@ -378,8 +378,8 @@ def main():
     crawler = Crawler()
     urls,metadata = crawler.run()
 
-    pprint(urls[10])
-    pprint(metadata[10])
+    # pprint(urls[10])
+    # pprint(metadata[10])
 
 if __name__ == "__main__":
     main()

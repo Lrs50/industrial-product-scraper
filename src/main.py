@@ -6,29 +6,21 @@ from pprint import pprint
 
 def main():
     
-    links = [
-        "https://www.baldor.com/catalog/027603",
-        "https://www.baldor.com/catalog/1021W",
-        # "https://www.baldor.com/catalog/CD1803R",
-        # "https://www.baldor.com/catalog/BSM100C-1150AA",
-        # "https://www.baldor.com/catalog/CD3433",
-        # "https://www.baldor.com/catalog/024018",
-        # "https://www.baldor.com/catalog/027550"
-        
-    ]
-
-    for link in links:
+    crawler = Crawler()
+    
+    urls,metadata = crawler.run()
+    for url,mdata in list(zip(urls,metadata))[:5]:
         parser = Parser()
         downloader = Downloader()
         
-        raw_data = parser.run(link)
+        raw_data = parser.run(url)
         assets = downloader.run(raw_data)
         
         raw_data["assets"] = assets
         
-        cleanJson = standardize_product_json(raw_data) 
+        clean_json = standardize_product_json(raw_data,mdata) 
         
-        print(cleanJson)
+        print(clean_json)
     
 if __name__ == "__main__":
     main()

@@ -1,5 +1,23 @@
-from typing import Dict, Any,List
+from typing import Dict, Any,List,Union
 from collections import defaultdict
+from pydantic import BaseModel
+from pprint import pprint
+
+class Product(BaseModel):
+    product_id: str
+    name: str = None
+    description: str = None
+    brand: str = None
+    category: str = None
+    status: str 
+    price_usd: str = None
+
+    info: Dict[str, str] = None
+    specs: Dict[str, str] = None
+    bom: List[Dict[str, str]] = None
+    accessories: List[Dict[str, str]] = None
+    assets: Dict[str, Union[str, List[str]]] = None
+    nameplate: Dict[str, Union[str, List[str]]] = None
 
 def deduplicate_bom(bom: List[Dict[str, str]]) -> List[Dict[str, str]]:
     """
@@ -75,28 +93,80 @@ def remove_empty_fields(data: Any) -> Any:
     else:
         return data
 
+def get_attribute(attributes: List[Dict[str, Any]], name: str) -> str:
+    for attr in attributes:
+        if attr.get("name") == name and attr.get("values"):
+            return attr["values"][0].get("text", "")
+    return ""
 
-def standardize_product_json(raw_json: Dict[str,Any]) ->  Dict[str,Any]:
+def extract_core_metadata(product: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Extracts and generates core metadata from Crawler Metadata.
+
+    Includes brand, category, status, price, and a synthesized name.
+
+    Args:
+        product (Dict[str, Any]): Raw crawler product JSON.
+
+    Returns:
+        Dict[str, Any]: A dictionary with core standardized fields.
+    """
+    product_id = product.get("code", "")
+
+    # Safely extract brand
+    brand = get_attribute(product.get("attributes", []), "brand")
+
+    # Safely extract category
+    categories = product.get("categories")
+    if isinstance(categories, list) and categories:
+        category = categories[0].get("text", "")
+    else:
+        category = ""
+
+    # Safely extract price
+    price = product.get("listPrice") or {}
+    amount = price.get("amount")
+    currency = price.get("currency", "USD")
+    try:
+        price_usd = f"{float(amount):.2f} {currency}"
+    except (TypeError, ValueError):
+        price_usd = ""
+
+    # Determine status
+    status = "discontinued" if product.get("isDiscontinued") else "active"
+
+    # Synthesize name
+    name_parts = [brand, category, product_id]
+    name = " ".join(part for part in name_parts if part) or "Unnamed Product"
+
+    return {
+        "name": name,
+        "brand": brand,
+        "category": category,
+        "price_usd": price_usd,
+        "status": status
+    }
+
+def standardize_product_json(raw_json: Dict[str,Any],metadata: Dict[str,Any]) ->  Dict[str,Any]:
     """
     Cleans and standardizes a raw scraped product JSON by removing unused or redundant fields.
 
     Args:
         raw_json (Dict[str, Any]): Raw product dictionary scraped from source.
+        metadata (Dict[str, Any]): Metadata returned by the Crawler.
 
     Returns:
         Dict[str, Any]: Cleaned and standardized product dictionary, ready for export or storage.
     """
     
-    clean_json = remove_empty_fields(raw_json)
-    
-    if clean_json.get("img_src"):
-        del clean_json["img_src"]
-    
-    if clean_json.get("pdf_src"):
-        del clean_json["pdf_src"]
-    
-    if clean_json.get("drawings"):
-        del clean_json["drawings"]
+    clean_json = {
+        **extract_core_metadata(metadata),
+        **raw_json
+    }
+
+    # Clean known irrelevant or duplicated fields
+    for key in ["img_src", "pdf_src", "drawings"]:
+        clean_json.pop(key, None)
     
     if clean_json.get("performance"):
         if clean_json["performance"].get("performance_curves"):
@@ -107,4 +177,4 @@ def standardize_product_json(raw_json: Dict[str,Any]) ->  Dict[str,Any]:
     if clean_json.get("parts"):
         clean_json["bom"] = deduplicate_bom(clean_json.pop("parts"))
     
-    return clean_json
+    return remove_empty_fields(Product(**clean_json).model_dump())
