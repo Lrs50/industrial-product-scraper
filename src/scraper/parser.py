@@ -218,7 +218,7 @@ class Parser(object):
             soup (BeautifulSoup): Parsed HTML page.
 
         Returns:
-            Dict[str,str]: Dictionary containing nameplate information, with unstructured lines grouped under 'EXTRAS'.
+            Dict[str,str]: Dictionary containing nameplate information, with unstructured lines grouped under 'extras'.
         """  
         nameplate = {}
         extras = []
@@ -253,7 +253,7 @@ class Parser(object):
                     elif text:
                         extras.append(text)
         if extras:
-            nameplate["EXTRAS"] = extras
+            nameplate["extras"] = extras
             
         self.logger.info("Successfully retrieved nameplate info") 
         return nameplate

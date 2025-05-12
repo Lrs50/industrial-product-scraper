@@ -1,6 +1,8 @@
-from scraper import Parser, Downloader
+from scraper import *
 
 from pprint import pprint
+
+
 
 def main():
     
@@ -22,7 +24,11 @@ def main():
         raw_data = parser.run(link)
         assets = downloader.run(raw_data)
         
-        pprint(assets)
+        raw_data["assets"] = assets
+        
+        cleanJson = standardize_product_json(raw_data) 
+        
+        print(cleanJson)
     
 if __name__ == "__main__":
     main()
