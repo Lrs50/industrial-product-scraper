@@ -118,23 +118,20 @@ class Crawler(object):
         self.browser.close()
         self.playwright.stop()
         
-    def run(self) -> List[str]:
+    def run(self) -> Tuple[List[str], List[dict]]:
         """
-        Executes the full crawling workflow and returns a list of product page URLs.
-
-        Steps:
-            - Initializes the browser session
-            - Extracts product category links
-            - Scrapes all product URLs across categories
-            - Cleans up browser resources
+        Executes the full crawling workflow and returns both product page URLs and raw product metadata.
 
         Returns:
-            List[str]: A list of collected product page URLs.
+            Tuple[List[str], List[dict]]: 
+                - A list of product page URLs (e.g., "https://www.baldor.com/catalog/...")
+                - A list of raw product metadata dictionaries retrieved from the API
         """
         
         self.logger.info("Starting the Crawler...")
         self.url = "https://www.baldor.com/catalog"
         self.products: List[str] = []
+        self.product_matches: List[str] = []
         
         try:
             self.setup_browser()
@@ -148,27 +145,31 @@ class Crawler(object):
             self.teardown_browser()
 
         self.logger.info(f"Finished crawling. Total products collected: {len(self.products)}")
-        return self.products
+        return self.products,self.product_matches
     
     def scrape_products(self) -> None:
         """
-        Extracts and returns the cleaned names of all subcategories on the catalog page.
+        Scrapes product URLs and raw product data from all registered categories.
 
-        Navigates to the main catalog URL, waits for the subcategory elements to load,
-        and parses their text content into a clean list of names.
+        Iterates through the list of categories, fetches all associated products using the Baldor API,
+        and builds a list of product page URLs. Also stores the raw product metadata returned by the API.
 
-        Returns:
-            List[str]: A list of cleaned subcategory names.
+        This function populates:
+            - self.products: A list of product page URLs (one per product code)
+            - self.product_matches: The full product metadata from the API for all categories
+
+        Logs progress and handles API or parsing errors gracefully.
         """
         
         for name,url in self.categories:
             try:
                 self.logger.info(f"Fetching items from category {name}")
                 category_id = url.split("#category=")[-1]
-                codes = self.collect_product_codes_for_category(category_id)
+                codes,product_matches = self.fetch_category_products_and_codes(category_id)
 
                 product_urls = [f"https://www.baldor.com/catalog/{code}" for code in codes]                
                 self.products.extend(product_urls)
+                self.product_matches = product_matches
                         
             except Exception as e:
                 self.logger.exception(f"Failed to fetch products for category '{name}': {e}")
@@ -327,22 +328,21 @@ class Crawler(object):
             self.logger.error(f"[UNEXPECTED ERROR] during request: {e}")
             return {"results": {"matches": []}}
 
-    def collect_product_codes_for_category(self,category_id: int, page_size: int = 1000) -> List[str]:
+    def fetch_category_products_and_codes(self, category_id: int, page_size: int = 1000) -> Tuple[List[str], List[Any]]:
         """
-        Collects all product codes for a given category by paginating through the Baldor API.
-
-        Sends repeated API requests until no more products are returned. Extracts the
-        "code" field from each product and accumulates the results.
-
+        Fetches all products and their codes for a given category by paginating through the Baldor API.
         Args:
             category_id (int): The numeric ID of the category to fetch products from.
             page_size (int): Number of products to request per page (default is 1000).
 
         Returns:
-            List[str]: A list of product codes retrieved from the category.
+            Tuple[List[str], List[Any]]: A tuple containing:
+                - A list of product codes retrieved from the category.
+                - A list of the full product entries returned by the API.
         """
                 
         all_codes = []
+        all_products = []
         page_index = 0
 
         while True:
@@ -365,17 +365,21 @@ class Crawler(object):
                 codes = []
                 
             all_codes.extend(codes)
+            all_products.extend(products)
             self.logger.info(f"Fetched page {page_index} with {len(products)} products")
 
             page_index += 1
 
         self.logger.info(f"Finished collecting products for category {category_id}. Total: {len(all_codes)}")
-        return all_codes
+        return all_codes,all_products
  
 def main():
     
     crawler = Crawler()
-    urls = crawler.run()
+    urls,metadata = crawler.run()
+
+    pprint(urls[10])
+    pprint(metadata[10])
 
 if __name__ == "__main__":
     main()
