@@ -1,6 +1,7 @@
 from typing import List, Dict, Any
 from pathlib import Path
 from urllib.parse import quote
+import re
 
 # import sys
 # import os
@@ -21,6 +22,12 @@ DEFAULT_HEADERS = {
     "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
     "Referer": "https://www.baldor.com/",
 }
+
+def sanitize_filename(filename: str) -> str:
+    """
+    Removes characters invalid in file names (especially for Windows).
+    """
+    return re.sub(r'[<>:"/\\|?*]', '', filename)
 
 def build_image_url(image_path: str) -> str:
     base = "https://www.baldor.com"
@@ -224,7 +231,11 @@ class Downloader(object):
             url = build_cad_url(cad_dict["value"],cad_dict["url"])
             
             file_type = cad_dict["value"].split(".")[-1]
-            name = f"cad_{cad_dict['filetype'].lower()}_{i}.{file_type}"
+            
+            name = "_".join(cad_dict["name"].split(" "))
+            name = f"{name}.{file_type}"
+            name = sanitize_filename(name)
+            
             self.download_file(url,f"{self.path}/{name}")
             paths["cads"].append(f"{self.relative_path}/{name}")
             
