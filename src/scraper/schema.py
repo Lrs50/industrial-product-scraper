@@ -1,7 +1,6 @@
 from typing import Dict, Any,List,Union
 from collections import defaultdict
 from pydantic import BaseModel
-from pprint import pprint
 
 from utils import *
 
@@ -18,8 +17,8 @@ class Product(BaseModel):
     specs: Dict[str, str] = None
     bom: List[Dict[str, str]] = None
     accessories: List[Dict[str, str]] = None
-    assets: Dict[str, Union[str, List[str]]] = None
     nameplate: Dict[str, Union[str, List[str]]] = None
+    assets: Dict[str, Union[str, List[str]]] = None
 
 def deduplicate_bom(bom: List[Dict[str, str]]) -> List[Dict[str, str]]:
     """
@@ -176,7 +175,7 @@ def standardize_product_json(raw_json: Dict[str,Any],metadata: Dict[str,Any]) ->
         if clean_json["performance"].get("performance_curves"):
             del clean_json["performance"]["performance_curves"]
         if clean_json["performance"].get("associated_urls"):
-            del clean_json["performance"]["performance_curves"]
+            del clean_json["performance"]["associated_urls"]
     
     if clean_json.get("parts"):
         clean_json["bom"] = deduplicate_bom(clean_json.pop("parts"))

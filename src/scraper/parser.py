@@ -113,7 +113,7 @@ class Parser(object):
                 self.data[session_name] = self.parsers[session_name](soup)
                 
             else:
-                self.logger.warning(f"No Parser implementation for {session_name.capitalize()}")
+                self.logger.error(f"No Parser implementation for {session_name.capitalize()}")
                 
         return self.data    
 

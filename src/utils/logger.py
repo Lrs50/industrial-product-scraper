@@ -1,5 +1,10 @@
 import logging 
 import os
+from datetime import datetime
+
+def generate_timestamped_name(prefix: str = "log") -> str:
+    now = datetime.now()
+    return f"{prefix}_{now.strftime('%Y_%m_%d')}"
 
 def get_logger(
     name: str,
@@ -21,7 +26,7 @@ def get_logger(
         logging.Logger: Configured logger with specified handlers and format.
     """
     
-    log_file = "project.log"
+    log_file = f"{generate_timestamped_name()}.log"
     log_dir = "logs"
     
     logger = logging.getLogger(name)
